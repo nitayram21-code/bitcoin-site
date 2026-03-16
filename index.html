@@ -162,6 +162,30 @@ main { position: relative; z-index: 1; width: 100%; max-width: 680px; }
 
 footer { position: relative; z-index: 1; margin-top: 4rem; text-align: center; font-weight: 200; font-size: 8px; letter-spacing: 4px; text-transform: uppercase; color: var(--text-faint); line-height: 3; }
 footer::before { content: ''; display: block; width: 40px; height: 1px; background: rgba(200,146,42,0.15); margin: 0 auto 2rem; }
+
+/* ── Mobile ── */
+@media (max-width: 480px) {
+  body { padding: 0 16px 6rem; }
+
+  header { padding: 3rem 0 3rem; }
+
+  .main-title { font-size: clamp(28px, 8vw, 40px); }
+
+  .date-frame { padding: 16px 28px; }
+  .date-name  { font-size: 13px; letter-spacing: 5px; }
+
+  .price-row {
+    grid-template-columns: 46px 1fr 120px;
+    gap: 12px; padding: 16px 0;
+  }
+
+  .col-year { font-size: 17px; }
+
+  .col-price { font-size: 20px; }
+  .col-change { font-size: 9px; }
+
+  .section-div { margin-bottom: 2rem; }
+}
 </style>
 </head>
 <body>
