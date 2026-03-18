@@ -101,6 +101,39 @@ header {
 .date-name { font-weight: 300; font-size: 16px; letter-spacing: 8px; color: var(--gold-light); text-transform: uppercase; }
 .date-sub  { font-weight: 200; font-size: 8px; letter-spacing: 5px; color: #f7931a; text-transform: uppercase; }
 
+/* ── Supply frame ── */
+.supply-frame {
+  margin-top: 2.5rem; text-align: center;
+  opacity: 0; animation: fadeUp 1s ease 1.4s forwards;
+}
+.supply-lbl {
+  font-weight: 200; font-size: 8px; letter-spacing: 7px;
+  text-transform: uppercase; color: #f7931a; margin-bottom: 0.7rem;
+}
+.supply-val {
+  font-family: 'Cormorant Garamond', serif; font-size: 34px;
+  font-weight: 400; color: var(--gold-light); letter-spacing: 1px;
+  font-variant-numeric: tabular-nums;
+}
+.supply-track {
+  width: 260px; height: 1px; background: rgba(200,146,42,0.1);
+  margin: 10px auto; position: relative; overflow: visible;
+}
+.supply-fill {
+  height: 1px; background: linear-gradient(90deg, rgba(200,146,42,0.2), var(--gold));
+  width: 0; transition: width 2s cubic-bezier(.4,0,.2,1);
+  position: relative;
+}
+.supply-fill::after {
+  content: ''; position: absolute; right: 0; top: 50%;
+  transform: translate(50%,-50%); width: 4px; height: 4px;
+  border-radius: 50%; background: var(--gold);
+}
+.supply-sub {
+  font-weight: 200; font-size: 8px; letter-spacing: 4px;
+  text-transform: uppercase; color: var(--text-faint); margin-top: 4px;
+}
+
 main { position: relative; z-index: 1; width: 100%; max-width: 680px; }
 .section-div { display: flex; align-items: center; gap: 1.5rem; margin-bottom: 3rem; }
 .section-div::before, .section-div::after { content: ''; flex: 1; height: 1px; border-top: 1px solid rgba(200,146,42,0.12); }
@@ -205,6 +238,12 @@ footer::before { content: ''; display: block; width: 40px; height: 1px; backgrou
   <div class="date-frame">
     <div class="date-name" id="dateBadge">—</div>
     <div class="date-sub">Closing Price · By Year</div>
+  </div>
+  <div class="supply-frame">
+    <div class="supply-lbl">Bitcoin in Circulation</div>
+    <div class="supply-val" id="supplyVal">—</div>
+    <div class="supply-track"><div class="supply-fill" id="supplyFill"></div></div>
+    <div class="supply-sub" id="supplySub">of 21,000,000 max supply</div>
   </div>
 </header>
 
@@ -540,6 +579,55 @@ async function loadChart() {
     requestAnimationFrame(draw);
   }
   draw();
+})();
+
+// ── Live Bitcoin supply counter ──
+(function() {
+  const MAX_SUPPLY = 21000000;
+  const BTC_PER_SEC = 3.125 / 600; // ~0.005208 BTC/s (post-4th halving)
+  let baseSupply = null;
+  let baseTime = null;
+  let rafId = null;
+
+  function fmtSupply(n) {
+    const whole = Math.floor(n);
+    const dec = Math.floor((n - whole) * 1000);
+    return whole.toLocaleString('en-US') + '.' + String(dec).padStart(3, '0');
+  }
+
+  function tick() {
+    if (baseSupply === null) return;
+    const elapsed = (Date.now() - baseTime) / 1000;
+    const current = baseSupply + elapsed * BTC_PER_SEC;
+    const pct = current / MAX_SUPPLY;
+    document.getElementById('supplyVal').textContent = fmtSupply(current);
+    const remaining = MAX_SUPPLY - current;
+    document.getElementById('supplySub').textContent =
+      (pct * 100).toFixed(4) + '% mined · ' + Math.round(remaining).toLocaleString('en-US') + ' remaining';
+    document.getElementById('supplyFill').style.width = (pct * 100).toFixed(4) + '%';
+    rafId = requestAnimationFrame(tick);
+  }
+
+  async function fetchSupply() {
+    try {
+      const res = await fetch('https://blockchain.info/q/totalbc?cors=true');
+      if (!res.ok) throw new Error();
+      const satoshis = parseFloat(await res.text());
+      baseSupply = satoshis / 1e8;
+      baseTime = Date.now();
+      if (!rafId) tick();
+    } catch(e) {
+      // Fallback: estimate based on known supply ~19,857,000 as of Mar 2026
+      if (baseSupply === null) {
+        baseSupply = 19857000;
+        baseTime = Date.now();
+        if (!rafId) tick();
+      }
+    }
+  }
+
+  fetchSupply();
+  setInterval(fetchSupply, 300000); // refresh every 5 min
 })();
 
 main();
